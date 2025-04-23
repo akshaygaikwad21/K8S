@@ -1,0 +1,61 @@
+coammands for K8S:
+
+Basic Commands: 
+
+kubectl run Pod1 --image=nginx
+
+kubectl get pod
+
+
+kubectl delete all pod
+
+kubectl delete <pod_name>
+
+kubectl get pod -o wide
+
+kubectl get pods -o wide
+
+--------------------------------------------------------------------------------
+
+K8s Manifest file.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demopod
+spec:
+  containers:
+  - name: container1
+    image: nginx
+  - name: container2
+    image: tomcat 
+	
+--------------------------------------------------------------------------------		
+
+kubectl apply -f <yml_file_name>
+
+kubectl exec -it pod_name -- bash (By default it will come inside the the first cintainer)
+
+kubectl exec -it -c <container_name> <pod_name> -- bash (it will come inside the the specified container)
+
+
+
+2 types pod connection:
+
+- two containers in a pod cannot have same ports.
+- You need to specify the port number of container .
+- if you dont specified, the hidden port is 80. so the request will got the 80 port.
+
+
+
+1)intra-pod connection
+2)inter pod connection
+
+
+1)intra-pod connection
+
+- same pod  containers can communicate with each other.
+
+2)inter pod connection
+
+- Two difft. pods containers can communicate with each other.
