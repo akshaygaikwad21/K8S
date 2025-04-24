@@ -1,0 +1,37 @@
+Commands:
+
+    kubectl api-resources 
+    kubectl apply -f <Manifest_file.yml>
+    kubectl apply -f <Service_file_name> 
+
+    kubectl get pod -o wide
+
+    kubectl get node -o wide
+
+
+NOTE:
+
+    * Pod get terminate again and again and ip got changed but not label of pod.
+
+
+** Service **
+
+ type- 1) ClusterIP -  which i used to provide static IP and common/single Ip to the pods, but work only inside         	  (default one) 	        cluster
+       
+       2) NodePort   -  service resource will generate a random port no.{30k}, and use it with nodeIP       			[nodeIp:nodePort]
+       3) LoadBalancer - 
+
+
+
+- How to write a service file.yml
+
+kind: Service
+metadata: 
+  name: my-svc
+spec:
+  selector:
+    team: dev
+  ports:
+  - port: 80
+    targetPort: 80
+  type: NodePort
