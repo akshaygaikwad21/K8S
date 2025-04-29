@@ -1,0 +1,22 @@
+
+- Deployment is used to manage and maintain the pods.
+- also, we can keep the pods in running on a perticuller time.
+
+- 2 types of policies are available.
+  
+  1) Rolling update
+  2) Rolling back.
+
+
+  1) Rolling update:
+
+      - In this policy the pods are automatically updates when we make some changes in the manifest file.
+
+
+    There are also some strategies are available:
+
+    - Rolling update strategy ----> Recreate the pods and then destroy the old once.
+    - Rcreate stategy --->          Reaceate all at once and destroy at once.
+
+    
+
