@@ -1,6 +1,7 @@
 
 - Deployment is used to manage and maintain the pods.
 - also, we can keep the pods in running on a perticuller time.
+- use for stateless application like frontend and backend.
 
 - 2 types of policies are available.
   
@@ -12,11 +13,32 @@
 
       - In this policy the pods are automatically updates when we make some changes in the manifest file.
 
+  2) Rolling Back:
+      - 
+
 
     There are also some strategies are available:
 
     - Rolling update strategy ----> Recreate the pods and then destroy the old once.
-    - Rcreate stategy --->          Reaceate all at once and destroy at once.
+    - Recreate stategy --->          Recreate all at once and destroy at once.
+    - Canary deployment.
+    - Blue-green deployment.
+
 
     
+
+    ** StatefulSet-
+      - In StatefulSet the previous state matters.
+      - It is use for Stateful application like DB.
+      - All pods are start from SS, have unique identity which start from 0.
+
+    
+    ======================================================================================
+
+
+    ** ConfigMap and Secret **
+
+    * ConfigMap
+      
+    - It is use to store the non confidential configuration data in a Key-Value pair.
 
