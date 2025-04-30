@@ -36,9 +36,84 @@
     ======================================================================================
 
 
-    ** ConfigMap and Secret **
+    ** ConfigMap & Secret files and how to map it into StatefulSet file to connect ot Database:**
 
-    * ConfigMap
+    * * ConfigMap * *
       
     - It is use to store the non confidential configuration data in a Key-Value pair.
 
+    -  How to write a CongiMap file
+
+        apiVersion: v1
+        kind: ConfigMap
+        metadata: 
+          name: my-config
+
+        data:
+          database: mydb
+
+
+
+    * * Secret * *
+
+    - It is use to store the  confidential configuration data in a Key-Value pair.
+
+    - How to wite a Secret file
+
+    - First we need to encrypt our passowrd:
+        
+        - echo -n <you-password> | base64
+
+    - then, enter that encrypt passoword inside the secert file.
+
+      apiVersion: v1
+        kind: Secret
+        metadata: 
+          name: my-secret
+
+        data:
+          password: <Encrypt-password>
+
+-------------------------------------------------------------------------------------------------
+  * * Now we have to map this in the StatefulSet file, to connect to database.* *
+
+
+apiVersion:  apps/v1
+kind: StatefulSet
+metadata:
+  name: my-ss
+
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+
+  template:
+    metadata:
+      labels:
+        app: myapp
+
+
+    spec:
+      containers:
+      - name: cont1
+        image:  mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: my-secret
+              key:  password
+
+        - name: MYSQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: my-config
+              key:  database
+      
+    ======================================================================================
+
+
+
+    
