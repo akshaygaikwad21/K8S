@@ -1,0 +1,89 @@
+1)  PersistentVolume (PV)
+
+    In Kubernetes, a PersistentVolume (PV) is a storage resource that exists independently of Pods. 
+    It provides a way to persist data across Pod restarts.
+
+Example PV YAML file:
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-pv
+  labels: 
+    vol:  pvvol
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: "/mnt/data"
+
+
+Key Components:
+
+- capacity.storage: Defines the size (e.g., 10GiB).
+- accessModes: ReadWriteOnce means only one node can write to it.
+- persistentVolumeReclaimPolicy: Retain keeps data even if the PV is released.
+- storageClassName: Helps with dynamic provisioning.
+- hostPath: Uses a directory on the node (not recommended for production).
+
+================================================================================================
+2)  PersistentVolumeClaim (PVC)
+
+  A PersistentVolumeClaim (PVC) file in Kubernetes is used to request storage from a PersistentVolume (PV).
+  It acts as a bridge between a Pod and persistent storage, ensuring that data is retained across Pod restarts.
+
+  Example PVC YAML File:
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: manual
+  selector:
+    matchLabels:
+      vol:  pvvol
+
+================================================================================================
+
+Deployment file
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deploy
+
+
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app:  myapp
+
+  template:
+    metadata:
+      labels:
+        app:  myapp
+
+    spec:
+      volumes:
+      - name: volvo
+        persistentVolumeClaim:
+          claimName:  my-pvc
+
+      containers:
+      - name: cont1
+        image:  nginx
+
+        volumeMounts:
+        - name: volvo
+          mountPath:  /opt
