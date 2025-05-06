@@ -1,0 +1,43 @@
+1) Create a IAM user and give him  AWS-managed policies to your IAM user:
+
+    - AdministratorAccess ---> (for full access)
+
+2)  Configure AWS CLI with IAM User Credential
+
+        aws configure
+        Enter:
+- AWS Access Key ID (from IAM user)
+- AWS Secret Access Key (from IAM user)
+- Region (e.g., ap-south-1)
+- Output format (default:)
+
+
+3)  Verify IAM User Authentication
+
+        Run:
+
+        aws sts get-caller-identity
+
+    - This should return details of your IAM user. If it fails, your credentials might be incorrect.
+
+4)  Install kubectl  --its a command line tool for managing kubernetes cluster
+
+    curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.1/2023-04-19/bin/linux/amd64/kubectl
+    chmod +x ./kubectl
+    mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+    echo 'export PATH=$PATH:$HOME/bin' >> ~/.bashrc
+    kubectl version --short --client
+
+5)  Install eksctl 
+
+    curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+    sudo mv /tmp/eksctl /usr/local/bin
+    eksctl version
+
+6)   create EKS cluster using eksctl
+
+     eksctl create cluster --name <cluster-name> --node-type t2.medium --nodes 1 --nodes-min 1 --nodes-max 3 --region <us-east-1>
+
+7)      delete cluster
+
+     eksctl delete cluster --name <cluster-name> --region <region>
