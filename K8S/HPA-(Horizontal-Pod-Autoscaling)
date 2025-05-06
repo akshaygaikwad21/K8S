@@ -1,0 +1,70 @@
+HPA - HOrizontal Pod Autoscaling
+
+
+commands-
+	
+	kubectl get ns
+	
+	kubectl get pod -n kube-system    ----(kube-system will show the resources of Master nodes)
+	
+	kubectl top pod
+	
+
+1) Deployment file
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deploy
+
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app:  myapp
+
+  template:
+    metadata:
+      labels:
+        app:  myapp
+
+
+    spec:
+      containers:
+      - name: cont1
+        image:  nginx
+      
+        resources:
+          limits:
+            cpu:  20m
+          requests:
+            cpu:  10m
+			
+==========================================================
+
+2) hpa file
+	
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: my-hpa
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: my-deploy
+
+
+  minReplicas:  1
+  maxReplicas:  5
+  
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target: 
+        type: Utilization
+        averageUtilization: 30
+                                     
+==========================================================
