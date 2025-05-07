@@ -99,6 +99,8 @@ spec:
       containers:
       - name: cont1
         image:  mysql
+        ports:  
+        - containerPort: 3306
         env:
         - name: MYSQL_ROOT_PASSWORD
           valueFrom:
