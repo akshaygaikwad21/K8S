@@ -112,8 +112,33 @@ spec:
               name: my-config
               key:  database
       
-    ======================================================================================
+==========================================================================================
+    To create a ClusterIP we've to creat a service file.
+
+  apiVersion: v1
+  kind: Service
+  metadata: 
+    name: my-svc
+
+  spec:
+    selector:
+      app:  myapp
+
+    ports:
+      - name: mysql
+        port: 3306
+        targetPort: 3306
+
+    type: ClusterIP
+=========================================================================================
+
+Commands-
+
+kubectl get svc
+
+mysql -h <Cluster_ip> -P 3306 -u root -p
 
 
+  
 
     
