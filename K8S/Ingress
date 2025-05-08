@@ -1,0 +1,164 @@
+front.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-front
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+        app:  frontapp
+
+
+  template:
+    metadata:
+      labels:
+        app:  frontapp
+
+
+    spec:
+      containers:
+      - name: cont1
+        image:  nginx
+		
+================================
+
+frontsvc
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontsvc
+
+
+spec:
+  selector:
+    app:  frontapp
+
+  ports:
+  - port: 80
+    targetPort: 80
+================================
+
+back.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app:  backapp
+
+  template:
+    metadata:
+      labels:
+        app:  backapp
+
+    spec:
+      containers:
+      - name: cont1
+        image:  tomcat
+================================
+
+backsvc
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: backsvc
+
+spec:
+  selector:
+    app:  backapp
+
+  ports:
+  - port: 8080
+    targetPort: 8080
+
+================================
+
+ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+
+spec:
+  ingressClassName:
+  rules:
+  - host: nginx.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: frontsvc
+            port:
+              number: 80
+
+  - host: tomcat.com
+    http:
+      paths:
+      - pathType:  Prefix
+        path: "/"
+        backend:
+          service:
+            name: backsvc
+            port:
+              number: 8080	
+	
+================================
+
+Now, download/ install ingress controller 
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.3.0/deploy/static/provider/cloud/deploy.yaml
+
+
+kubectl get ns
+
+kubectl get pod -n ingress-nginx
+
+kubectl	 get svc -n ingress-nginx  ---( it will show the load balancer )
+
+
+Now, 
+to ge the ingressClassName
+	commnad
+		kubectl get ingressclass
+
+give this ingressClassName in the ingress.yaml file
+
+now, apply ingress.yaml file
+	kubectl apply -f ingress.yaml   ---- (it wil apply and connect the ingress file with the ingress controller)
+	
+	
+kubectl get ingress
+
+Now,
+We dot have any domain name available
+so, will do it in the local,
+
+	1) we have to convert our Load balancer's DNS into IPv4 address.
+		-	nslookup <copy the DNS of Load Balancer>   ----> it will convert DNS into IPv4
+			
+	2) NOw,
+		go to below location.
+			vi /etc/hosts
+			
+	3) and edit the file as below,
+	
+		<public_ip that you get from nslookup>	nginx.com	tomcat.com
+		
+	4) Save the file .
+		
+	5) curl  tomcat.com  OR 
+	   curl nginx.com  ---> To get the result
+	
