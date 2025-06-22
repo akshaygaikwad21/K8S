@@ -1,0 +1,389 @@
+DB create 
+
+secret.yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+
+data:
+  password: QWtzaGF5MTIz
+  
+  
+----------------------------------------------------------
+StatefulSet.yaml
+
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-sts
+
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mydb
+
+
+  template:
+    metadata:
+      labels:
+        app: mydb
+
+
+    spec:
+      containers:
+      - name: db-container
+        image:  mysql
+
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: my-secret
+              key: password
+
+        - name: MYSQL_DATABASE
+          value: "mysqldb"
+		  
+		  
+-------------------------------------------------------
+
+2) For backend
+
+Deployement.yaml  (for tomcat)
+
+FROM ubuntu
+WORKDIR /opt
+RUN apt update && apt install -y openjdk-17-jdk wget vim
+ADD https://downloads.apache.org/tomcat/tomcat-9/v9.0.106/bin/apache-tomcat-9.0.106.tar.gz /opt/
+RUN tar -xzf apache-tomcat-9.0.106.tar.gz && rm apache-tomcat-9.0.106.tar.gz
+COPY student.war /opt/apache-tomcat-9.0.106/webapps/
+COPY mysql-connector.jar /opt/apache-tomcat-9.0.106/lib/
+EXPOSE 8080
+CMD ["/opt/apache-tomcat-9.0.106/bin/catalina.sh", "run"]
+
+
+Then, need to scp the mysql-connector.jar and student.war file to Ec2-server.
+
+PS C:\Users\Lenovo\Downloads> scp -i .\Jenkins.pem .\student.war .\mysql-connector.jar ec2-user@13.204.75.205:/home/ec2-user
+
+
+then, come to server and move to current dir.
+
+[root@ip-172-31-0-142 ~]# mv /home/ec2-user/mysql-connector.jar .
+[root@ip-172-31-0-142 ~]# mv /home/ec2-user/student.war .
+
+after this build image 
+
+docker build -t image1 .
+
+
+After, that we are creating a container with new image
+
+ docker run -d --name Akshay image1
+ 
+ then, go inside the container i.e Akshay
+ 
+ docker exec -it Akshay bash
+ 
+ then, we've to make changes in the 
+ /opt/apache-tomcat-9.0.106/conf# vi context.xml
+ 
+ add this content
+ 
+ <Resource name="jdbc/TestDB" auth="Container" type="javax.sql.DataSource"
+		  maxTotal="100" maxIdle="30" maxwaitMillis="10000"
+		  username="root" password="<your passowrd of db that u give inside the secret file>" driverClassName="com.mysql.jdbc.Driver"
+		  url="jdbc:mysql://172.17.0.2:3306/<your_DB_name>"/>
+
+
+save it.
+
+Then, Ctrl + D OR exit
+
+The, create a new image from the Akshay container
+
+docker commit Akshay image2
+
+tag it 
+
+ docker tag image2 akshaygaikwad21/new-tom:2026
+ 
+ docker images
+ 
+ 
+  docker login
+ 
+
+Give your username and passowrd of dockerhub:
+
+then, push image to dockerhub
+
+docker push akshaygaikwad21/new-tom:2026
+
+
+Now, wanted to create a image for nginx, 
+ first do the below
+ 
+ mkdir nginx-test
+cd nginx-test
+
+vi Dockerfile
+
+FROM nginx:1.25-alpine
+COPY index.html /usr/share/nginx/html/index.html
+
+save it.
+
+then,
+ in index.html  write the content that Kuldeeps gave to you .. for index file
+ save it.
+ 
+ 
+
+Then, exit 
+
+and do the following
+
+docker build -t nginximage .
+docker run -d --name nginxcont -p 8080:80 nginximage
+docker login
+docker tag nginximage akshaygaikwad21/nginxdemo:latest
+docker push akshaygaikwad21/nginxdemo:latest
+
+-----------------------------------------------
+Then, create deployment file and mentione the nginx image for frontendapp
+
+
+-----------------------------------------------
+3) Now wanted to create backend
+
+create deployment.yaml
+
+deployment.yaml
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontapp
+
+  template:
+    metadata:
+      labels:
+        app: frontapp
+
+    spec:
+      containers:
+      - name: nginx
+        image: akshaygaikwad21/my-nginx:2025-clean
+        ports:
+        - containerPort: 80
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backendapp
+
+  template:
+    metadata:
+      labels:
+        app:  backendapp
+
+    spec:
+      containers:
+      - name: tomcat
+        image: akshaygaikwad21/new-tom:2025
+        ports:
+        - containerPort: 8080
+		
+
+
+
+
+
+----------------------------------------------------------
+Deployement2.yaml  (for nginx)
+FROM nginx:1.25-alpine
+COPY index.html /usr/share/nginx/html/index.html
+
+----------------------------------------------------------
+
+
+deployment.yaml
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontapp
+
+  template:
+    metadata:
+      labels:
+        app: frontapp
+
+    spec:
+      containers:
+      - name: nginx
+        image:  akshaygaikwad21/nginxdemo:latest
+        ports:
+        - containerPort: 80
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backendapp
+
+  template:
+    metadata:
+      labels:
+        app:  backendapp
+
+    spec:
+      containers:
+      - name: tomcat
+        image: akshaygaikwad21/new-tom:2025
+        ports:
+        - containerPort: 8080
+		
+		
+save it,
+
+Then, allow ALL TCP ports to cluster server.
+
+then, kubectl get svc
+
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+kubernetes   ClusterIP   10.100.0.1       <none>        443/TCP          147m
+nginx        NodePort    10.100.143.182   <none>        80:31108/TCP     36m
+tomcat       NodePort    10.100.128.243   <none>        8080:31515/TCP   36m
+
+and copy the frotnd port
+
+and then on bowser search with clusterip: frontend port
+
+Ex- 13.233.128.217:31108/
+
+
+Now it will show your fronend page
+
+		
+----------------------------------------------------------
+commands used- 
+
+pwd
+vi sts.yaml
+echo -n Akshay123 | base 64
+echo -n Akshay123 | base64
+vi secret.yaml
+kubectl apply -f sts.yaml
+vi sts.yaml
+kubectl apply -f sts.yaml
+kubectl apply -f secrets.yaml
+kubectl apply -f secret.yaml
+yum install docker -y
+kubectl get pod
+vi sts.yaml
+systemctl start docker
+systemctl enable docker
+vi Dockerfile
+docker build -t image1 .
+ls
+mv /home/ec2-user/student.war .
+mv /home/ec2-user/mysql-connector.jar .
+ls
+docker build -t image1 .
+vi Dockerfile
+docker build -t image1 .
+docker images
+docker run -d --name Akshay image1
+docker exec -it Akshay bash
+docker commit Akshay image2
+docker tag image2 akshaygaikwad21/new-tom:2026
+docker images
+docker login
+docker push akshaygaikwad21/new-tom:2026
+vi deploy.yaml
+vi Dockerfile2
+ls
+vi Dockerfile2
+docker build -t nginximage .
+docker images
+docker run -d --name nginxcont myimage
+docker run -d --name nginxcont nginximage
+docker exec -it nginxcont bash
+docker build -t nginximage -f Dockerfile.nginx .
+docker inspect --format='{{.Config.Image}}' nginxcont
+docker container rm -f nginxcont
+docker image rm nginximage
+mkdir nginx-test
+cd nginx-test
+vi Dockerfile
+ls -l Dockerfile index.html
+echo '<h1>Hello from NGINX inside Docker!</h1>' > index.html
+docker build -t nginximage .
+docker run -d --name nginxcont -p 8080:80 nginximage
+docker login
+docker tag nginximage akshaygaikwad21/nginxdemo:latest
+docker push akshaygaikwad21/nginxdemo:latest
+ls
+vi index.html
+docker build -t nginximage .
+docker container rm -f nginxcont
+docker run -d --name nginxcont -p 8080:80 nginximage
+docker exec -it nginxcont sh
+docker build -t nginximage .
+docker tag nginximage akshaygaikwad21/nginxdemo:latest
+docker push akshaygaikwad21/nginxdemo:latest
+ls
+vi deploy.yaml
+kubectl apply -f deploy.yaml
+kubectl get pod
+vi svc.yaml
+kubectl apply -f svc.yaml
+kubectl get pod
+kubectl get pod -o wide
+kubectl get svc
+kubectl get pod -o wide
+kubectl exec -it front-56d6fb5bc-pqrs9 -- bash
+kubectl exec -it front-56d6fb5bc-pqrs9 -- sh
+ls
+vi deploy.yaml
+vi svc.yaml
+kubectl get pod -o wide
+kubectl get pod
+kubectl get svc
