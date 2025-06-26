@@ -1,0 +1,450 @@
+
+
+
+----------------------------------------------------------
+	** 3 Tier app using K8S full Steps **
+	------------------------------
+
+
+
+	Refer video day 51- for 3 tier app using K8s
+	
+	
+1) Create a EKS cluster
+
+2) DB create
+
+	create a sts file for it.
+	
+StatefulSet.yaml
+
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-sts
+
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mydb
+
+
+  template:
+    metadata:
+      labels:
+        app: mydb
+
+
+    spec:
+      containers:
+      - name: db-container
+        image:  mysql
+
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: my-secret
+              key: password
+
+        - name: MYSQL_DATABASE
+          value: "mysqldb"
+	
+	
+
+Then, create a secret file
+
+secret.yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+
+data:
+  password: QWtzaGF5MTIz
+  
+
+
+- apply	 both files.
+- see the pods are running or not
+	kubectl get pod
+	
+	
+
+--------------------------------------------------------
+
+3) Backend
+
+- create a deployment file for backend only.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backendapp
+
+  template:
+    metadata:
+      labels:
+        app:  backendapp
+
+    spec:
+      containers:
+      - name: tomcat
+        image: akshaygaikwad21/new-tom:2025
+        ports:
+        - containerPort: 8080
+	
+
+
+
+
+- create svc file for it.
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat
+
+spec:
+  selector:
+    app: backendapp
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: NodePort
+
+
+
+- apply both file.
+
+- then,  On the cluster server allow ALL TCP.
+
+
+- see the svc
+	kubectl get svc
+	it will show the port of backend
+	
+	NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+kubernetes   ClusterIP   10.100.0.1       <none>        443/TCP          147m
+nginx        NodePort    10.100.143.182   <none>        80:31108/TCP     36m
+tomcat       NodePort    10.100.128.243   <none>        8080:31515/TCP   36m
+
+
+
+
+- and, copy its ip and backend port
+
+	cluster ip : backend port
+	
+	It will show the tomcat page and then
+		on that url/student
+		so  will go to the student page
+		
+------------------------------------------------------
+
+4)	Now integrate the backednpod to DB pods to save the data in DB.
+ 
+Now, if look all the pod.
+	i.e 
+		kubectl get pod
+		
+		we will see backend and DB pods running
+	
+	NOTE- In the DB pod of (sts-0) it is a master pod of DB, and by default it has read & write permission.
+			and other DB pods have only read permission.
+			
+		Now, we have to create container from our image i.e (new-tom:2025) 
+		
+		first install docker
+		
+		yum install docker -y
+		
+		systemctl start docker
+		systemctl enable docker
+		
+		Then, now create container from our image i.e (new-tom:2025) 
+		
+	-	docker run -d --name cont1 akshaygaikwad21/new-tom:2025
+	
+	-	docker exec -it cont1 bash
+	
+	-	go inside the context.xml and in that mention all our DB name, password, DB port,..
+		and  most imp -> mention the ip address of the DB's sts-0 pod 
+		
+	- After mentioning all this into this context.xml file.
+	
+	- Then, save and exit from the container
+		
+		- create a new image from this container i.e cont1
+		
+	-	docker commit cont1 akshaygaikwad21/new-tom2:2026
+	
+	- now push this to dockerhub
+	
+	- docker login
+	
+	- docker push akshaygaikwad21/new-tom2:2026
+	
+
+- Now we have to change the image name in the deployment file of backend.
+
+	-in the deployment file just give the imgae name over there.
+	
+		- 	image: akshaygaikwad21/new-tom2:2026
+		
+		save it and apply the file.
+		
+		- kubectl apply -f deployment.yaml
+		
+		so it will make changes in our backend pods... (This process called Rolling update)
+		
+		
+		see the pods now.
+		
+		kubectl get pod -o wide.
+		
+
+- Now for storing the data in DB, we have to create a table in our DB.
+
+- go to mysql
+	
+	- mysql -h localhost -u root -p
+	
+
+mysql> show databases;
+
+mysql> use mysqldb;
+
+		- Now we have to a table in our db 
+		
+		use the below query
+		
+		 CREATE TABLE students(student_id INT NOT NULL AUTO_INCREMENT, student_name VARCHAR (20) NOT NULL,  student_addr VARCHAR(100) NOT NULL, student_age VARCHAR(3) NOT NULL, student_qual VARCHAR(20) NOT NULL, student_precent VARCHAR(10) NOT NULL, student_year_passed VARCHAR(10) NOT NULL, PRIMARY KEY (student_id) );
+		
+		- now, desc table students;
+		
+
+- Now go to url through , clusterip: DB port/student
+
+	it will show the student page.
+	make a entry of data.
+	and it store in the table.
+	
+
+-  We successfully attached the DB and backend.
+
+
+---------------------------------------------------------------------------------
+
+5)IMP => This step is not neccssory as we've to check it is working or not.
+
+ now we have to use the headless service as our sts-0 pod is dynamic ip, so will use the headless service.
+
+for that create a service file.
+
+	- svc3.yaml 
+	
+	
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc3
+
+spec:
+  selector:
+    app: mydb
+  clusterIP: None
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+
+
+
+
+save it.and apply
+
+kubectl apply -f svc3.yaml
+
+- NOTE - here in this file app: mydb (i.e our sts file DB , and in it what we using the label, we've to mention it over here.
+
+
+
+- now see the svc
+
+	kubectl get svc
+	
+	For svc3 it will not showing any cluster ip.
+	
+	
+NOTE - headless service only used for the statefullset..
+		bocz, statefullset pods are static and unique.
+		
+		
+
+- Now we for accessing headless service using its DNS
+
+	headless service DNS 
+	
+	<pod_name>.<headless_service_name>.<namespace>.svc.cluster.local 
+	
+	
+	Ex-> 
+
+
+	my-sts-0.svc3.default.svc.cluster.local
+
+
+
+
+
+-  Now in our deployment file, in that on the image	we've to to mentionthis DNS
+
+	image: 	my-sts-0.svc3.default.svc.cluster.local
+	
+	 
+
+---------------------------------------------------------------------------------
+
+
+6) After the step 4 ,now we've to create frontend
+
+-	for frontend, first create a deployment file.
+
+
+-	First we need to create a image i.e(new-nginx:2025)for frontend
+
+	Dockerfile2  (for nginx)
+
+
+FROM nginx:1.25-alpine
+COPY index.html /usr/share/nginx/html/index.html
+
+
+	and push this to dockerhub.
+	
+	and then, mention it in frontdeploy.yaml
+	
+
+	frontdeploy.yaml
+	
+	
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontendapp
+
+  template:
+    metadata:
+      labels:
+        app:  frontendapp
+
+    spec:
+      containers:
+      - name: tomcat
+        image: akshaygaikwad21/nginxdemo
+        ports:
+        - containerPort: 80	
+	
+	
+save and apply.
+
+- Then, create a service file for frontdeploy.
+
+	frontsvc.yaml
+	
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+
+spec:
+  selector:
+    app: frontendapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
+
+
+save and apply.
+
+
+
+-	see the pod
+	
+	kubectlget pod -o wide
+	
+
+- Now,go inside the frontend's pod
+
+	kubectl exec -it <frontend_pod_name> -- bash
+
+
+		cd /usr/share/nginx/html/
+		vi index.html
+		
+			now, in this mentiion the backend url.
+					
+					<cluster ip:port_of_backend_service/student>
+
+			Ex- > <http://18:231.187.150:31995/student>
+	
+		save it.
+		
+
+- Now go to the LoadBalancer.
+
+	in the LoadBalancer , all TCP for all in the security group
+	
+	
+	
+- Now access throght the LoadBalancer's DNS.
+
+-		Done. - 
+
+
+
+------------------------------------------------------------------------------------
+
+
+Dockerfile (for tomcat)
+
+FROM ubuntu
+WORKDIR /opt
+RUN apt update && apt install -y openjdk-17-jdk wget vim
+ADD https://downloads.apache.org/tomcat/tomcat-9/v9.0.106/bin/apache-tomcat-9.0.106.tar.gz /opt/
+RUN tar -xzf apache-tomcat-9.0.106.tar.gz && rm apache-tomcat-9.0.106.tar.gz
+COPY student.war /opt/apache-tomcat-9.0.106/webapps/
+COPY mysql-connector.jar /opt/apache-tomcat-9.0.106/lib/
+EXPOSE 8080
+CMD ["/opt/apache-tomcat-9.0.106/bin/catalina.sh", "run"]
+
+
+----------------------------------------------------------
+
+
+
+
+
+
+
