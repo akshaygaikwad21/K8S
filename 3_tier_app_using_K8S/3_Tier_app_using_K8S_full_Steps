@@ -180,7 +180,12 @@ Now, if look all the pod.
 	-	docker exec -it cont1 bash
 	
 	-	go inside the context.xml and in that mention all our DB name, password, DB port,..
-		and  most imp -> mention the ip address of the DB's sts-0 pod 
+		and  most imp -> mention the ip address of the DB's pod i.e sts-0 
+		
+		Ex-    <Resource name="jdbc/TestDB" auth="Container" type="javax.sql.DataSource"
+                          maxTotal="100" maxIdle="30" maxwaitMillis="10000"
+                          username="root" password="mysql123" driverClassName="com.mysql.jdbc.Driver"
+                          url="jdbc:mysql://192.168.19.62:3306/mysqldb"/>
 		
 	- After mentioning all this into this context.xml file.
 	
