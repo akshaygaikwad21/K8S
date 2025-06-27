@@ -2,7 +2,7 @@
 
 
 ----------------------------------------------------------
-	** 3 Tier app using K8s full Steps **
+	** 3 Tier app using K8S full Steps **
 	------------------------------
 
 
@@ -180,7 +180,12 @@ Now, if look all the pod.
 	-	docker exec -it cont1 bash
 	
 	-	go inside the context.xml and in that mention all our DB name, password, DB port,..
-		and  most imp -> mention the ip address of the DB's sts-0 pod 
+		and  most imp -> mention the ip address of the DB's pod i.e sts-0 
+		
+		Ex-    <Resource name="jdbc/TestDB" auth="Container" type="javax.sql.DataSource"
+                          maxTotal="100" maxIdle="30" maxwaitMillis="10000"
+                          username="root" password="mysql123" driverClassName="com.mysql.jdbc.Driver"
+                          url="jdbc:mysql://192.168.19.62:3306/mysqldb"/>
 		
 	- After mentioning all this into this context.xml file.
 	
@@ -217,41 +222,14 @@ Now, if look all the pod.
 
 - Now for storing the data in DB, we have to create a table in our DB.
 
-- go to mysql
+- 	First go inside sts-0 pod
 	
-	- mysql -h localhost -u root -p
+	kubectl exec -it sts-0 -- bash
 	
+	then, below command to go inside mysql
 	
-	Issue ->  after the above command, able togo inside the mysql but no showing our DB in that DB list.
+		mysql -h localhost -u root -p
 	
-	sol -> IMP-> use the below command, then u can see the db in that DB list, But..
-					after creatin the students table.
-					when try to fill fileds on the url the data is not storing in the table.
-					
-				
-
-
- kubectl delete statefulset sts
- kubectl apply -f sts.yaml
- kubectl get pod -o wide
- 
- 
- NAME                            READY   STATUS    RESTARTS   AGE     IP               NODE                                           NOMINATED NODE   READINESS GATES
-backenddeploy-cf6fbc45d-spjz7   1/1     Running   0          7m45s   192.168.62.78    ip-192-168-46-14.ap-south-1.compute.internal   <none>           <none>
-backenddeploy-cf6fbc45d-zwljp   1/1     Running   0          7m34s   192.168.45.198   ip-192-168-46-14.ap-south-1.compute.internal   <none>           <none>
-sts-0                           1/1     Running   0          52s     192.168.37.148   ip-192-168-46-14.ap-south-1.compute.internal   <none>           <none>
-sts-1                           1/1     Running   0          49s     192.168.32.208   ip-192-168-46-14.ap-south-1.compute.internal   <none>           <none>
-
-
-
- kubectl exec -it sts-0 -- bash
- bash-5.1# mysql -u root -p
- Enter password:
- 
- now you can see you db in that list of db's.
-	
-
-
 
 mysql> show databases;
 
