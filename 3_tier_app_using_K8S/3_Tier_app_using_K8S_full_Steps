@@ -239,7 +239,8 @@ mysql> use mysqldb;
 		
 		use the below query
 		
-		 CREATE TABLE students(student_id INT NOT NULL AUTO_INCREMENT, student_name VARCHAR (20) NOT NULL,  student_addr VARCHAR(100) NOT NULL, student_age VARCHAR(3) NOT NULL, student_qual VARCHAR(20) NOT NULL, student_precent VARCHAR(10) NOT NULL, student_year_passed VARCHAR(10) NOT NULL, PRIMARY KEY (student_id) );
+	CREATE TABLE if not exists students(student_id INT NOT NULL AUTO_INCREMENT, student_name VARCHAR (100) NOT NULL,  student_addr VARCHAR(100) NOT NULL, student_age VARCHAR(3) NOT NULL, student_qual VARCHAR(20) NOT NULL, student_percent VARCHAR(10) NOT NULL, student_year_passed VARCHAR(10) NOT NULL, PRIMARY KEY (student_id) );
+	
 		
 		- now, desc table students;
 		
@@ -332,46 +333,182 @@ NOTE - headless service only used for the statefullset..
 -	for frontend, first create a deployment file.
 
 
--	First we need to create a image i.e(new-nginx:2025)for frontend
+To create a dockerfile of nginx
 
-	Dockerfile2  (for nginx)
+- 	mkdir -p frontend/html
+	cd frontend
 
-
-FROM nginx:1.25-alpine
-COPY index.html /usr/share/nginx/html/index.html
-
-
-	and push this to dockerhub.
 	
-	and then, mention it in frontdeploy.yaml
-	
+2. Create the Dockerfile
 
-	frontdeploy.yaml
+FROM nginx:latest
+COPY ./html /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+
+
+
+3. Add Web Content
+
+Create a folder named html and add an index.html:
+
+mkdir -p frontend/html
+
+echo "<!DOCTYPE html>
+<html lang="en">
+ 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        body{
+            height: 100vh;
+        }
+        .body-img img {
+            width: 500px;
+        }
+ 
+        a {
+            font-size: 30px;
+            text-decoration: none;
+            color: white;
+        }
+ 
+        .nav a:hover {
+            color: black;
+           
+        }
+ 
+        .header {
+            height: 60px;
+            background-color: rgb(162, 162, 237);
+            padding-left: 20px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+ 
+        .nav{
+            height: 60px;
+            width: 600px;
+            padding: 5px;
+        }
+ 
+        .nav a {
+            text-decoration: none;
+            color: white;
+            cursor: pointer;
+            margin-left: 40px;
+        }
+        .footer{
+            height: 60px;
+            background-color: grey;
+            position: relative;
+            bottom: 0;
+            padding: 10px;
+            color: white;
+        }
+ 
+        button{
+            border-radius: 20px;
+            padding: 10px;
+            background-color: blue;
+            color: white;
+           
+        }
+ 
+        button:hover {
+            background-color:  rgb(4, 4, 73);
+            box-shadow: 0px 0px 5px 5px black;
+        }
+    </style>
+</head>
+ 
+<body>
+    <div class="header">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXAm-zUxdL7GCxMFO9PLNguDisaswkb00fjg&s"
+            width="120" />
+        <div class="nav">
+            <a href="#">Home</a>
+            <a href="http://43.204.215.28:8080/student/">Registration</a>
+            <a href="#">About</a>
+        </div>
+    </div>
+    <br/><br/>
+    <center>
+        <h1>Welcome to Student Management Site</h1>
+        <br /><br />
+        <div class="body-img">
+            <img src="  https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2xQcwKitRgXfqdi34DYlocPSEXD2G2zZipg&s" />
+        </div>
+        <br /><br /><br /><br /><br /><br />
+        <button><a href="http://16.16.201.237:8081/student/">Go to the registration page</a></button>
+        <br/><br/><br/>
+    </center>
+   
+</body>
+ 
+</html>" > frontend/html/index.html
+
+
+
+
+
+4. 🔨  Build and Tag Image
+
+	cd frontend
+
+# Build and tag with custom name
+
+	docker build -t frontend:nginx:2k25 .
+
+
+5. Tag and Push to Docker Hub
+
+	docker tag frontend:nginx:2k25 akshaygaikwad21/nginxdemo:2k25
+
+
+	docker login
 	
 	
-apiVersion: apps/v1
+6.	 Push image:
+
+	docker push akshaygaikwad21/nginxdemo:2k25
+
+7. Update frontdeploy.yaml
+
+	apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: front
-
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: frontendapp
-
   template:
     metadata:
       labels:
-        app:  frontendapp
-
+        app: frontendapp
     spec:
       containers:
-      - name: tomcat
-        image: akshaygaikwad21/nginxdemo
+      - name: frontend
+        image: akshaygaikwad21/nginxdemo:2k25
         ports:
-        - containerPort: 80	
-	
+        - containerPort: 80
+
+
+
+
+kubectl apply -f frontdeploy.yaml
+
 	
 save and apply.
 
@@ -383,15 +520,14 @@ save and apply.
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx
-
+  name: frontend-service
 spec:
   selector:
     app: frontendapp
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 80
+      port: 80         # Exposed port (external)
+      targetPort: 80   # Container port
   type: LoadBalancer
 
 
@@ -402,6 +538,9 @@ save and apply.
 -	see the pod
 	
 	kubectlget pod -o wide
+	
+	
+	
 	
 
 - Now,go inside the frontend's pod
@@ -423,7 +562,7 @@ save and apply.
 
 - Now go to the LoadBalancer.
 
-	in the LoadBalancer , all TCP for all in the security group
+	in the LoadBalancer , allow all TCP for all in the security group
 	
 	
 	
@@ -433,23 +572,7 @@ save and apply.
 
 
 
-------------------------------------------------------------------------------------
-
-
-Dockerfile (for tomcat)
-
-FROM ubuntu
-WORKDIR /opt
-RUN apt update && apt install -y openjdk-17-jdk wget vim
-ADD https://downloads.apache.org/tomcat/tomcat-9/v9.0.106/bin/apache-tomcat-9.0.106.tar.gz /opt/
-RUN tar -xzf apache-tomcat-9.0.106.tar.gz && rm apache-tomcat-9.0.106.tar.gz
-COPY student.war /opt/apache-tomcat-9.0.106/webapps/
-COPY mysql-connector.jar /opt/apache-tomcat-9.0.106/lib/
-EXPOSE 8080
-CMD ["/opt/apache-tomcat-9.0.106/bin/catalina.sh", "run"]
-
-
-----------------------------------------------------------
+----------------------------- Done -------------------------------------------------------
 
 
 
